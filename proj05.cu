@@ -90,12 +90,12 @@ MonteCarlo( float *dvs, float *dths, float *dgs, float *dhs, float *dds, int *dh
 	// see if the ball doesn't even reach the cliff:
 	float t = -vy / ( 0.5*GRAVITY );
 	float x = vx * t;
-	if( ????? )
+	if( x >= g )
 	{
 		// see if the ball hits the vertical cliff face:
 		t = g / vx;
 		float y = vy*t + 0.5*GRAVITY*t*t;
-		if( ????? )
+		if( y >= h )
 		{
 			// the ball hits the upper deck:
 			float a = 0.5 * GRAVITY;
@@ -116,9 +116,9 @@ MonteCarlo( float *dvs, float *dths, float *dgs, float *dhs, float *dds, int *dh
 			float upperDist = vx * tmax  -  g;
 
 			// see if the ball hits the castle:
-			if(  ????? )
+			if(  fabs(upperDist - d) <= TOL )
 			{
-				?????
+				dhits[gid] = 1;
 			}
 		} // if ball clears the cliff face
 	} // if ball gets as far as the cliff face
@@ -158,11 +158,11 @@ main( int argc, char* argv[ ] )
 	CudaCheckError( );
 
 	// copy host memory to the device:
-	cudaMemcpy( dvs,  hvs,  ?????, ????? );
-	cudaMemcpy( dths, hths, ?????, ????? );
-	cudaMemcpy( dgs,  hgs,  ?????, ????? );
-	cudaMemcpy( dhs,  hhs,  ?????, ????? );
-	cudaMemcpy( dds,  hds,  ?????, ????? );
+    cudaMemcpy( dvs,  hvs,  NUMTRIALS*sizeof(float), cudaMemcpyHostToDevice );
+    cudaMemcpy( dths, hths, NUMTRIALS*sizeof(float), cudaMemcpyHostToDevice );
+    cudaMemcpy( dgs,  hgs,  NUMTRIALS*sizeof(float), cudaMemcpyHostToDevice );
+    cudaMemcpy( dhs,  hhs,  NUMTRIALS*sizeof(float), cudaMemcpyHostToDevice );
+    cudaMemcpy( dds,  hds,  NUMTRIALS*sizeof(float), cudaMemcpyHostToDevice );
 	CudaCheckError( );
 
 	// setup the execution parameters:
@@ -183,7 +183,7 @@ main( int argc, char* argv[ ] )
 	CudaCheckError( );
 
 	// execute the kernel:
-	MonteCarlo<<< ?????, ????? >>>( ?????, ?????, ?????, ?????, ?????,    ????? );
+    MonteCarlo<<< grid, threads >>>( dvs, dths, dgs, dhs, dds, dhits );
 
 	// record the stop event:
 	cudaEventRecord( stop, NULL );
@@ -204,7 +204,7 @@ main( int argc, char* argv[ ] )
 	double megaTrialsPerSecond = trialsPerSecond / 1000000.;
 
 	// copy result from the device to the host:
-	cudaMemcpy( hhits, dhits, ?????, ????? );
+	cudaMemcpy( hhits, dhits, NUMTRIALS*sizeof(int), cudaMemcpyDeviceToHost );
 	CudaCheckError( );
 
 	// compute the sum :
